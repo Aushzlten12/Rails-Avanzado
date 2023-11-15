@@ -169,7 +169,29 @@ Usaremos la gema 'OmniAuth' para realizar autenticaciones usando una API. `gem '
 
 El atacante podria enviar datos maliciosos, datos no deseados y podría causar vulnerabilidades al sistema de autenticación lo cual podría hacer que permita usuarios no con buenas intenciones a cambiar contenido de nuestra aplicación de forma indebida. Para solucionar esto, al investigar, se puede usar *Strong Parameters*, *Validaciones adicionales*.
 
+Logramos autenticarnos usando el API de Twitter
+
+![autenticacion-twitter](3.png)
+
+
 #### Claves Foraneas
+
+Explica la siguientes líneas de SQL:
+
+```sql
+SELECT reviews.*
+    FROM movies JOIN reviews ON movies.id=reviews.movie_id
+    WHERE movies.id = 41;
+```
+
+Seleccionamos todos los campos de la tabla **reviews** de la combinación de tablas **movies** y **reviews** cuando el campo id de la tabla **movies** sea igual al campo movie_id de la tabla **reviews**, donde el campo id de la tabla **movies** sea 41.
+
+**¿Por que se puede hacer esto?**
+
+Porque en las tablas relacionales se puede usar la sentencia JOIN para combinar tablas basandose en campos comunes entre las tablas.
+
+#### Asociaciones Indirectas
+
 
 
 

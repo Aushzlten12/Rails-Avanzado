@@ -1,3 +1,10 @@
 Rails.application.config.middleware.use OmniAuth::Builder do
-  provider :twitter, "8pxT7apagx4LO0hIMQYOD9S0Y", "IJBpGDjLzgWfHpcUU6EZceisyJXPRTm8vXx3QLO7P3aP0JBXOr"
+  provider :developer if Rails.env.development?
+  provider(
+    :twitter2,
+    Rails.application.credentials.dig(:twitter, :client_id),
+    Rails.application.credentials.dig(:twitter, :client_secret),
+    callback_path: '/auth/twitter2/callback',
+    scope: 'tweet.read users.read bookmark.read offline.access',
+  )
 end
