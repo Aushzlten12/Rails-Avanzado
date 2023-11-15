@@ -190,8 +190,129 @@ Seleccionamos todos los campos de la tabla **reviews** de la combinación de tab
 
 Porque en las tablas relacionales se puede usar la sentencia JOIN para combinar tablas basandose en campos comunes entre las tablas.
 
+En la consola de rails tenemos los siguientes resultados
+
+```ruby
+irb(main):004> inception = Movie.find_by(title: 'Inception')
+  Movie Load (0.2ms)  SELECT "movies".* FROM "movies" WHERE "movies"."title" = ? LIMIT ?  [["title", "Inception"], ["LIMIT", 1]]
+=> 
+#<Movie:0x000055ef3ed7f9f0
+...
+irb(main):005> yo = Moviegoer.find(1)
+  Moviegoer Load (0.4ms)  SELECT "moviegoers".* FROM "moviegoers" WHERE "moviegoers"."id" = ? LIMIT ?  [["id", 1], ["LIMIT", 1]]
+=> 
+#<Moviegoer:0x000055ef3efcd5e0
+...
+irb(main):006> me_review = Review.new(potatoes: 5)
+=> #<Review:0x00007fbe4050d768 id: nil, potatoes: 5, comments: nil, moviegoer_id: nil, movie_id: nil, created_at: nil, updated_at: nil>
+irb(main):007> inception.reviews << me_review
+=> nil
+irb(main):008> inception.reviews
+  Review Load (0.5ms)  SELECT "reviews".* FROM "reviews" WHERE "reviews"."movie_id" = ?  [["movie_id", 33]]
+=> [#<Review:0x00007fbe4050d768 id: nil, potatoes: 5, comments: nil, moviegoer_id: nil, movie_id: 33, created_at: nil, updated_at: nil>]
+irb(main):010> yo.reviews << me_review
+  TRANSACTION (0.2ms)  begin transaction
+  Review Create (1.2ms)  INSERT INTO "reviews" ("potatoes", "comments", "moviegoer_id", "movie_id", "created_at", "updated_at") VALUES (?, ?, ?, ?, ?, ?)  [["potatoes", 5], ["comments", nil], ["moviegoer_id", 1], ["movie_id", 33], ["created_at", "2023-11-15 05:53:18.532363"], ["updated_at", "2023-11-15 05:53:18.532363"]]
+  TRANSACTION (12.9ms)  commit transaction
+  Review Load (0.4ms)  SELECT "reviews".* FROM "reviews" WHERE "reviews"."moviegoer_id" = ?  [["moviegoer_id", 1]]
+=> 
+[#<Review:0x00007fbe4050d768
+  id: 1,
+  potatoes: 5,
+  comments: nil,
+  moviegoer_id: 1,
+  movie_id: 33,
+  created_at: Wed, 15 Nov 2023 05:53:18.532363000 UTC +00:00,
+  updated_at: Wed, 15 Nov 2023 05:53:18.532363000 UTC +00:00>]
+irb(main):011> inception.reviews.map { |r| r.moviegoer.name }
+=> ["Auzhlten12"]
+```
+
 #### Asociaciones Indirectas
 
+**¿Qué indica el siguiente código SQL ?**
 
+```sql
+SELECT movies .*
+    FROM movies JOIN reviews ON movies.id = reviews.movie_id
+    JOIN moviegoers ON moviegoers.id = reviews.moviegoer_id
+    WHERE moviegoers.id = 1;
+```
 
+Este codigo SQL recupera todos los campos de la tabla movies desde la combinacion de la tabla movies con reviews tal que el campo id de movies sea igual al campo movie_id de la tabla reviews, a esta combinacion se le combina la tabla moviegoers tal que el id de esta sea igual al moviegoers_id de la tabla reviews, y a toda esta tabla combinada se toma la fila tal que el id de moviegoers sea 1.
 
+- Como llamar a save o save! sobre un objeto que usa asociaciones también afecta a los objetos a los que esté asociado, se aplican algunas salvedades si alguno de estos métodos falla. Por ejemplo, si acabas de crear una nueva Movie y dos nuevas Review que asociar a esa Movie`, e intenta guardar dicha película, cualquiera de los tres métodos save que se apliquen fallarán si los objetos no son válidos (entre otras razones). !Comprueba esto!.
+
+```ruby 
+irb(main):015> movie = Movie.new(title: "Inception")
+=> #<Movie:0x000055bf20c960f0 id: nil, title: "Inception", rating: nil, description: nil, release_date: nil, created_at: nil, updated_at: nil>
+irb(main):017> movie.reviews.build(:potatoes => 5)
+=> #<Review:0x000055bf223e1d90 id: nil, potatoes: 5, comments: nil, moviegoer_id: nil, movie_id: nil, created_at: nil, updated_at: nil>
+irb(main):018> movie.reviews.build(:potatoes => nil)
+=> #<Review:0x000055bf225dd6a8 id: nil, potatoes: nil, comments: nil, moviegoer_id: nil, movie_id: nil, created_at: nil, updated_at: nil>
+irb(main):019> movie.save
+=> false
+```
+Podemos ver que la pelicula no se guarda en la base de datos. A pesar de que el review nil fue contruido.
+
+- Existen opciones adicionales en los métodos de asociaciones que controlan lo que pasa a los objetos que son “tenidos” cuando el objeto “poseedor” se destruye. Por ejemplo, has_many :reviews,:dependent=>:destroy especifica que las críticas que pertenezcan a una determina película se deben borrar de la base de datos si se borra esa película.
+
+```ruby
+irb(main):013> movie = Movie.find_by(title: 'Inception')
+  Movie Load (0.4ms)  SELECT "movies".* FROM "movies" WHERE "movies"."title" = ? LIMIT ?  [["title", "Inception"], ["LIMIT", 1]]
+=> 
+#<Movie:0x000055a033334d10
+...
+irb(main):014> review1 = Review.create(potatoes: 4, movie: movie)
+=> 
+#<Review:0x000055a033650418
+...
+irb(main):015> review2 = Review.create(potatoes: 5, movie: movie)
+=> 
+#<Review:0x000055a03228b0b8
+...
+irb(main):017> movie.reviews << review1
+=> nil
+irb(main):018> movie.reviews << review2
+=> nil
+irb(main):019> movie.reviews
+  Review Load (0.4ms)  SELECT "reviews".* FROM "reviews" WHERE "reviews"."movie_id" = ?  [["movie_id", 34]]
+=> 
+[#<Review:0x000055a033650418
+  id: nil,
+  potatoes: 4,
+  comments: nil,
+  moviegoer_id: nil,
+  movie_id: 34,
+  created_at: nil,
+  updated_at: nil>,
+ #<Review:0x000055a03228b0b8
+  id: nil,
+  potatoes: 5,
+  comments: nil,
+  moviegoer_id: nil,
+  movie_id: 34,
+  created_at: nil,
+  updated_at: nil>]
+irb(main):022> movie.destroy
+  TRANSACTION (0.1ms)  begin transaction
+  Movie Destroy (0.3ms)  DELETE FROM "movies" WHERE "movies"."id" = ?  [["id", 34]]
+  TRANSACTION (1.5ms)  commit transaction
+=> 
+#<Movie:0x000055a033334d10
+ id: 34,
+ title: "Inception",
+ rating: "G",
+ description: nil,
+ release_date: Wed, 15 Nov 2023 00:00:00.000000000 UTC +00:00,
+ created_at: Wed, 15 Nov 2023 06:41:07.483770000 UTC +00:00,
+ updated_at: Wed, 15 Nov 2023 06:41:07.483770000 UTC +00:00>
+irb(main):023> Review.count
+  Review Count (0.4ms)  SELECT COUNT(*) FROM "reviews"
+=> 0
+irb(main):024> movie.reviews
+=> []
+```
+Se creo una instacia de la clase de Movie, la cual se le agrego dos reviews, al ejecutar movie.reviews pudimos ver dos reviews las cuales habiamos creado.
+
+Al eliminar la instancia, luego ejecutando movie.reviews resulto un array vacio, por lo que se eliminaron los reviews a esa pelicula.

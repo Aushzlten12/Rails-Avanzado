@@ -17,4 +17,10 @@ class SessionsController < ApplicationController
     session[:user_id] = user.id
     redirect_to movies_path
   end
+
+  def destroy
+    session.delete(:user_id)
+    flash[:notice] = 'Logged out successfully.'
+    redirect_to movies_path
+  end
 end

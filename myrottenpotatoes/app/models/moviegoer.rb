@@ -1,4 +1,4 @@
-class Moviegoer < ApplicationRecord
+class Moviegoer < ActiveRecord::Base
   has_many :reviews
   def self.create_with_omniuth(auth)
     Moviegoer.create!(

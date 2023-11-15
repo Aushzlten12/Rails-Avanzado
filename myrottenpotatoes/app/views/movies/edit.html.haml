@@ -1,0 +1,23 @@
+-# app/views/movies/edit.html.haml
+
+%h2 Editar película
+
+= form_for @movie do |f|
+  -# Aquí puedes agregar campos de formulario para editar la película
+  .field
+    = f.label :title, 'Title:'
+    = f.text_field :title
+
+  .field
+    = f.label :rating, 'Rating:'
+    = f.text_field :rating
+
+  .field
+    = f.label :release_date, 'Release Date:'
+    = f.date_field :release_date
+
+  .actions
+    = f.submit 'Save changes'
+    = link_to 'Cancel', movie_path(@movie)
+
+= link_to 'Back to details', movie_path(@movie)
