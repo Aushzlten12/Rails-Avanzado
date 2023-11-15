@@ -1,5 +1,5 @@
--# add to end of index.html.haml
- 
+# add to end of index.html.haml
+
 = link_to 'Add new movie', new_movie_path
 
 %h1 All Movies
@@ -13,8 +13,6 @@
       %th More Info
   %tbody
     - @movies.each do |movie|
-      %tr
-        %td= movie.title 
-        %td= movie.rating
-        %td= movie.release_date
-        %td= link_to "More about #{movie.title}", movie_path(movie)
+      = render partial: 'movie', locals: {movie: movie}
+
+= render partial: 'layouts/footer'
