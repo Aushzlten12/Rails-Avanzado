@@ -145,3 +145,31 @@ El título cambia, separa cada palabra por el espacio, lo convierte a minusculas
 
 ### Filtros
 
+```ruby
+class ApplicationController < ActionController::Base
+    before_action :set_current_user  # change before_filter
+    protected # prevents method from being invoked by a route
+    def set_current_user
+        # we exploit the fact that the below query may return nil
+        @current_user ||= Moviegoer.where(:id => session[:user_id])
+        redirect_to login_path and return unless @current_user
+    end
+end
+```
+
+El método `set_current_user` verifica si existe un determinado usuario en la tabla Moviegoer. Sin embargo al desplegarlo localmente, no se puede encontrar dicha tabla **Could not find table 'moviegoers'**.
+
+#### SSO y autenticación a través de terceros
+
+Creamos una migración y un modelo para Moviegoer con el comando `rails generate model Moviegoer name:string provider:string uid:string` y luego `rails db:migrate` para crear la migración.
+
+Usaremos la gema 'OmniAuth' para realizar autenticaciones usando una API. `gem 'omniauth'` además de la gema omniauth-twitter `gem 'omniauth-twitter'`
+
+**Pregunta**: Debes tener cuidado para evitar crear una vulnerabilidad de seguridad. ¿Qué sucede si un atacante malintencionado crea un envío de formulario que intenta modificar params[:moviegoer][:uid] o params[:moviegoer][:provider] (campos que solo deben modificarse mediante la lógica de autenticación) publicando campos de formulario ocultos denominados params[moviegoer][uid] y así sucesivamente?.
+
+El atacante podria enviar datos maliciosos, datos no deseados y podría causar vulnerabilidades al sistema de autenticación lo cual podría hacer que permita usuarios no con buenas intenciones a cambiar contenido de nuestra aplicación de forma indebida. Para solucionar esto, al investigar, se puede usar *Strong Parameters*, *Validaciones adicionales*.
+
+#### Claves Foraneas
+
+
+
