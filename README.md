@@ -45,3 +45,103 @@ Así mismo en las vistas restantes.
 
 ### Validaciones
 
+Al modelo de Movie se le definen métodos para validar los campos de cada objeto creado.
+
+```ruby
+class Movie < ActiveRecord::Base
+    def self.all_ratings ; %w[G PG PG-13 R NC-17] ; end #  shortcut: array of strings
+    validates :title, :presence => true
+    validates :release_date, :presence => true
+    validate :released_1930_or_later # uses custom validator below
+    validates :rating, :inclusion => {:in => Movie.all_ratings},
+        :unless => :grandfathered?
+    def released_1930_or_later
+        errors.add(:release_date, 'must be 1930 or later') if
+        release_date && release_date < Date.parse('1 Jan 1930')
+    end
+    @@grandfathered_date = Date.parse('1 Nov 1968')
+    def grandfathered?
+        release_date && release_date < @@grandfathered_date
+    end
+end
+```
+
+Usando *rails console* podemos crear un objeto y verificar dichos métodos como se puede ver en la siguiente imagen.
+
+![rails-console](1.png)
+
+Se creo un objeto de la clase película con un título en blanco, una fecha de estreno muy antigua. Por lo que este objeto no es válido, podemos ver que tiene errores en el campo title y release_date.
+
+```ruby
+class MoviesController < ApplicationController
+  def new
+    @movie = Movie.new
+  end 
+  def create
+    if (@movie = Movie.create(movie_params))
+      redirect_to movies_path, :notice => "#{@movie.title} created."
+    else
+      flash[:alert] = "Movie #{@movie.title} could not be created: " +
+        @movie.errors.full_messages.join(",")
+      render 'new'
+    end
+  end
+  def edit
+    @movie = Movie.find params[:id]
+  end
+  def update
+    @movie = Movie.find params[:id]
+    if (@movie.update_attributes(movie_params))
+      redirect_to movie_path(@movie), :notice => "#{@movie.title} updated."
+    else
+      flash[:alert] = "#{@movie.title} could not be updated: " +
+        @movie.errors.full_messages.join(",")
+      render 'edit'
+    end
+  end
+  def destroy
+    @movie = Movie.find(params[:id])
+    @movie.destroy
+    redirect_to movies_path, :notice => "#{@movie.title} deleted."
+  end
+  private
+  def movie_params
+    params.require(:movie)
+    params[:movie].permit(:title,:rating,:release_date)
+  end
+end
+```
+El controlador de Movie, tenemos diferentes métodos.
+
+* El primero el método **new** con el cual se crea un instancia vacía de la clase Movie. 
+* El método **create** es el método por el cual se verifica si la instancia `@movie` ha sido creada, en este caso si se crea realiza una redirección a movies_path. Si no envía una alerta que no sea creado la instancia y llama al método **new**
+* El método **edit** este encuentra una instancia de la clase Movie mediante el parametro del id.
+* El método **update** en el cual a partir de la instancia encontrada por el id, si a este se le actualizan los atributos, redirije a `movie_path(@movie)` sino muestra una alerta y llama al método **edit**
+* El método **destroy** este encuentra una instancia de la clase al igual que el método **edit**, al destruir la instancia, redirije a movies_path.
+* El método **movie_params** el cual es privado, este método recibe los parametros para la instancia *Movie*, pero solo permite `:title, :rating, :release_date`
+
+Se puede deducir que el método **create** es un método **GET**, al igual que el método **edit**. El método **create** es un método **POST**. El método **update** es un método **PUT**, el método **destroy** es un método **DELETE**.
+
+Se tiene el siguiente método antes de guardar una instancia a la base de datos.
+
+```ruby
+class Movie < ActiveRecord::Base
+    before_save :capitalize_title
+    def capitalize_title
+        self.title = self.title.split(/\s+/).map(&:downcase).
+        map(&:capitalize).join(' ')
+    end
+end
+```
+Usando rails console, podemos mostrar un ejemplo. 
+
+![rails-console-2](2.png)
+
+```ruby
+self.title = self.title.split(/\s+/).map(&:downcase).
+        map(&:capitalize).join(' ')
+```
+El título cambia, separa cada palabra por el espacio, lo convierte a minusculas cada palabra y luego al primer caracter lo convierte a mayusculas, por eso que se ingreso como title : "STAR wars" y al imprimir el title mostró "Star Wars".
+
+### Filtros
+
