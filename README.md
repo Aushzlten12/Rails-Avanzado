@@ -316,3 +316,126 @@ irb(main):024> movie.reviews
 Se creo una instacia de la clase de Movie, la cual se le agrego dos reviews, al ejecutar movie.reviews pudimos ver dos reviews las cuales habiamos creado.
 
 Al eliminar la instancia, luego ejecutando movie.reviews resulto un array vacio, por lo que se eliminaron los reviews a esa pelicula.
+
+## Parte 2 de la Actividad : Rutas REST para asociaciones
+
+- **Pregunta:** ¿Este enfoque es de tipo REST? ¿por qué?
+
+No, ya que al obtener el id de `session` usamos el controlador de reviews para crear una critica tiendo como parametro ese id, sin embargo el enfoque REST debe de contar con URLs explicitas en las que muestren los recursos, controladores usados. Una URL como `/movies/:movie_id/reviews` sería un enfoque REST para crear una critica asociada a una pelicula, que una URL `/reviews`.
+
+```ruby
+resources :movies do
+  resources :reviews
+end
+```
+
+En routes.rb, hacemos este cambio para que el recurso `movies` necesite o se enlace con los recursos `reviews` al ejecutar `rails routes`
+
+```ruby
+movie_reviews GET     /movies/:movie_id/reviews(.:format)    reviews#index
+              POST    /movies/:movie_id/reviews(.:format)    reviews#create
+new_movie_review GET    /movies/:movie_id/reviews/new(:format)    reviews#new
+edit_movie_review GET   /movies/:movie_id/reviews/:id/edit(.:format)   reviews#edit
+movie_review GET    /movies/:movie_id/reviews/:id(.:format)   reviews#show
+PATCH   /movies/:movie_id/reviews/:id(.:format)    reviews#update
+PUT   /movies/:movie_id/reviews/:id(.:format)    reviews#update
+DELETE    /movies/:movie_id/reviews/:id(.:format)    reviews#destroy
+```
+
+Obtenemos estas URLs para los métodos REST de reviews para determinada película dependiente del id de la película.
+
+- **Pregunta:** ¿Por qué tenemos que dar valores a los campos movie_id y moviegoer_id de una crítica en las acciones new y create de ReviewsController, pero no en las acciones edit o update?.
+
+Por que al crear un nuevo `review` debe estar relacionado con la tabla `movie` y `moviegoer` por ello los campos `movie_id` y `moviegoer_id` son claves foraneas y son necesarias para crear un `review`. Pero estos no son necesarios al editar, ya que lo que se cambia con las acciones `update` y `edit` es el valor del campo `potatoes` solo ese, no la película ni el usuario, mas bien si fuera otro usuario diferente al que lo creo, no deberia de actualizar ese `review`
+
+```ruby
+def user_is_current
+  unless @review.moviegoer == @current_user
+    flash[:warning] = 'You are not authorized to edit this review.'
+    redirect_to movie_path(@movie)
+  end
+end
+```
+
+Por eso definimos un método para el usuario que creo ese review solo pueda actualizarlo y no otros.
+
+#### Repaso
+
+1. ¿Es mejor utilizar un enfoque de desarrollo del lado del cliente o del lado del servidor al diseñar una aplicación que implica la entrada de datos a través de formularios HTML
+  Considero que es mejor usar un enfoque del lado del servidor ya que si bien el usuario ingresa los valores en el formulario en el navegador lo cual es al lado del cliente. Sin embargo, la validación de esos datos, la creación de instancias, su actualización esta al lado del servidor.
+2. Al realizar una consulta de base de datos como `@reviews = Review.where(rating: 5)`​, que luego llamamos `​@reviews.each do |review| ; review.moviegoers.first` ​que debemos hacer?
+  El parametro no es `rating` sino `potatoes` lo cual seleccionaria las `reviews` con una calificacion de 5. Luego con `review.moviegoers.first` lo primero que hace es devolver un array con todos los `moviegoers` que crearon un `review` con una calificacion de 5 a cualquier pelicula, a esa colección solo selecciona el primer moviegoer.
+  En mi consola daría error, ya que solo hay un `moviegoer` y no sería una colección por lo cual el método `first`.
+3. Modifica la lista de películas de la siguiente manera. Cada modificación va a necesitar que realices un cambio en una capa de abstracción diferente:
+   * Modifica la vista `Index` para incluir el número de fila de cada fila en la tabla de películas. Pista: Busca la documentación de la función `each_with_index` usada en
+    
+    ```ruby
+    -# add to end of index.html.haml
+    = link_to 'Add new movie', new_movie_path
+
+    %h1 All Movies
+
+    %table#movies
+      %thead
+        %tr
+          %th Row
+          %th Movie Title
+          %th Rating
+          %th Release Date
+          %th More Info
+      %tbody
+        - @movies.each_with_index do |movie,index|
+          = render partial: 'layouts/movie', locals: {movie: movie,index: index}
+
+    = render partial: 'layouts/footer'
+    ```
+    Ya que tenemos una vista parcial _movie.html.haml, se le envia el parametro de index para el primer campo de la vista.
+
+    ```ruby
+    %tr
+      %td= index + 1
+      %td= movie.title 
+      %td= movie.rating
+      %td= movie.release_date
+      %td= link_to "More about #{movie.title}", movie_path(movie)
+    ```
+
+   * Modifica la vista `Index` para que cuando se sitúe el ratón sobre una fila de la tabla, dicha fila cambie temporalmente su color de fondo a amarillo. Pista: busca información sobre la pseudo-clase `hover` que te ofrece CSS.
+
+    ```css
+    table#movies th:hover{
+      background-color: gold;
+      cursor: pointer;
+    }
+    ```
+    Implementamos la pseudo-clase `hover` en los headers de la tabla para que cambie su fondo de color a `gold` y su puntero sea `pointer` una forma de flecha.
+
+   * Modifica la acción `Index` del controlador para que devuelva las películas ordenadas alfabéticamente por título, en vez de por fecha de lanzamiento. Pista: No intentes            ordenar el resultado de la llamada que hace el controlador a la base de datos. Los gestores de bases de datos ofrecen formas para especificar el orden en que se quiere  una       lista de resultados y, gracias al fuerte acoplamiento entre ActiveRecord y el sistema gestor de bases de datos (RDBMS) que hay debajo, los métodos `find` y `all` de la             biblioteca de ActiveRecord en Rails ofrece una manera de pedirle al RDBMS que haga esto.
+
+  ```ruby
+  def index
+    @movies = Movie.order(:title)
+  end
+  ```
+  La instancia `@movies` ahora tendrá las películas ordenadas alfabeticamente por su campo `title`.
+
+   * Simula que no dispones de ese fuerte acoplamiento de ActiveRecord, y que no puedes asumir que el sistema de almacenamiento que hay por debajo pueda devolver la colección           de ítems en un orden determinado. Modifica la acción `Index` del controlador para que devuelva las películas ordenadas alfabéticamente por título. Pista: Utiliza el método         `sort` del módulo `Enumerable` de Ruby.
+
+  ```ruby
+  def index
+    @movies = Movie.all.sort_by(&:title)
+  end
+  ```
+  Primero seleccionamos todas las películas, luego usamos `sort_by` para ordenarlos por la key `title`.
+
+4. Supongamos que queremos agregar un modelo `Theaters` a Rotten Potatoes, con la suposición simplificadora de que cada `Theater (cine)` muestra solo una película en un momento dado, pero para una `Movie` determinada podría proyectarse en muchos `Theater`. Además de agregar una tabla `theaters` a la base de datos, ¿qué pasos son necesarios para que `movie.theaters` devuelva una lista de todos los cines en los que se proyecta una película?.
+   
+5. Suponiendo que una película tiene muchas reseñas, una reseña pertenece a una sola película y existe el ID de película 5, ¿qué tablas se actualizarán como resultado del siguiente código?
+
+  ```ruby
+    m = Movie.find(5)
+    m.reviews.build(:potatoes => 5)
+    m.save!
+  ```
+
+Se actualizará la tabla `reviews` ya que lo que hace el código es encontrar la película con `id=5` guardarla en la variable `m`. Luego crea un review para esa pelicula `m` con parametro : `:potatoes => 5` y luego se guarda en la base de datos actualizando solo la tabla `reviews`.
