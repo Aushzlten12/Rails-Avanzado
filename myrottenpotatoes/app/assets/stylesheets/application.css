@@ -62,6 +62,12 @@ html, body {
     font-weight: bold;
     background-color: wheat;
   }
+
+  table#movies th:hover{
+    background-color: gold;
+    cursor: pointer;
+  }
+
   table#movies th, table#movies td {
     padding: 4px;
     text-align: left;

@@ -1,6 +1,7 @@
 class Movie < ActiveRecord::Base
     has_many :reviews, :dependent  => :destroy
     has_many :moviegoers, :through => :reviews
+    has_many :theaters
     def self.all_ratings ; %w[G PG PG-13 R NC-17] ; end #  shortcut: array of strings
     validates :title, :presence => true
     validates :release_date, :presence => true

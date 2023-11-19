@@ -6,12 +6,13 @@
 %table#movies
   %thead
     %tr
+      %th Row
       %th Movie Title
       %th Rating
       %th Release Date
       %th More Info
   %tbody
-    - @movies.each do |movie|
-      = render partial: 'layouts/movie', locals: {movie: movie}
+    - @movies.each_with_index do |movie,index|
+      = render partial: 'layouts/movie', locals: {movie: movie,index: index}
 
 = render partial: 'layouts/footer'
